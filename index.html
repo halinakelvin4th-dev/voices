@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Creator Studio - Pro SaaS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        /* Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #10b981; /* Emerald-500 */
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+        
+        /* Audio Player Customization */
+        audio {
+            filter: invert(1) hue-rotate(180deg);
+            opacity: 0.9;
+            border-radius: 0.5rem;
+        }
+
+        .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="bg-[#0B1120] text-white font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- ================= 1. AUTH VIEW (Login/Signup) ================= -->
+    <div id="auth-view" class="absolute inset-0 z-50 flex items-center justify-center bg-[#0B1120]">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
+            
+            <!-- Login Form -->
+            <div id="login-form-container">
+                <div class="text-center mb-8">
+                    <div class="inline-flex p-3 rounded-xl bg-indigo-600/20 text-indigo-400 mb-4"><i data-lucide="lock" class="w-8 h-8"></i></div>
+                    <h1 class="text-2xl font-bold text-white">Welcome Back</h1>
+                    <p class="text-slate-400 text-sm mt-1">Login to AI Creator Studio</p>
+                </div>
+                <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+                    <input type="text" id="login-user" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500" placeholder="Username">
+                    <input type="password" id="login-pass" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500" placeholder="Password">
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg">Login</button>
+                </form>
+                <p class="text-center text-xs text-slate-500 mt-4">
+                    New here? <button onclick="toggleAuthMode('signup')" class="text-indigo-400 hover:underline font-bold">Create Account</button>
+                </p>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup-form-container" class="hidden">
+                <div class="text-center mb-8">
+                    <div class="inline-flex p-3 rounded-xl bg-emerald-600/20 text-emerald-400 mb-4"><i data-lucide="user-plus" class="w-8 h-8"></i></div>
+                    <h1 class="text-2xl font-bold text-white">Create Account</h1>
+                    <p class="text-slate-400 text-sm mt-1">Start with Free Plan</p>
+                </div>
+                <form id="signup-form" class="space-y-4" onsubmit="handleSignup(event)">
+                    <input type="text" id="signup-user" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500" placeholder="Choose Username">
+                    <input type="password" id="signup-pass" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500" placeholder="Choose Password">
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg">Sign Up</button>
+                </form>
+                <p class="text-center text-xs text-slate-500 mt-4">
+                    Already have an account? <button onclick="toggleAuthMode('login')" class="text-emerald-400 hover:underline font-bold">Login</button>
+                </p>
+            </div>
+
+            <p id="auth-error" class="text-red-400 text-xs text-center mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <!-- ================= 2. ADMIN PANEL ================= -->
+    <div id="admin-view" class="absolute inset-0 z-40 bg-[#0B1120] hidden flex flex-col">
+        <div class="border-b border-slate-800 bg-[#0f172a] px-6 py-4 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield" class="w-5 h-5 text-emerald-500"></i> Admin Dashboard</h2>
+            <div class="flex gap-3">
+                <button onclick="goToToolAsAdmin()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg flex items-center gap-2">
+                    <i data-lucide="mic" class="w-4 h-4"></i> Open Generator
+                </button>
+                <button onclick="logout()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 text-xs font-bold rounded-lg">Logout</button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 max-w-7xl mx-auto w-full space-y-8">
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold">Total Users</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="admin-total-users">0</h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-emerald-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold">Active Revenue</p>
+                    <h3 class="text-3xl font-bold text-white mt-1">$<span id="admin-revenue">0</span></h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-amber-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold">Pending Requests</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="admin-pending-count">0</h3>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-8">
+                <!-- Payment Requests -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="credit-card" class="w-5 h-5 text-amber-400"></i> Upgrade Requests</h3>
+                    <div id="requests-list" class="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                        <!-- Requests Injected Here -->
+                        <p class="text-slate-500 text-sm italic text-center py-4">No pending requests.</p>
+                    </div>
+                </div>
+
+                <!-- User Database -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-blue-400"></i> All Users</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-400">
+                            <thead class="bg-slate-800/50 text-slate-200">
+                                <tr><th class="p-2">User</th><th class="p-2">Plan</th><th class="p-2">Action</th></tr>
+                            </thead>
+                            <tbody id="user-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3. MAIN TOOL VIEW ================= -->
+    <div id="tool-view" class="absolute inset-0 z-30 bg-[#0B1120] hidden flex flex-col">
+        <!-- Navbar -->
+        <div class="border-b border-slate-800 bg-[#0F172A] px-6 py-3 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2 rounded-lg"><i data-lucide="mic" class="w-5 h-5 text-white"></i></div>
+                <div>
+                    <h1 class="text-lg font-bold text-white">Creator Studio</h1>
+                    <p class="text-[10px] text-slate-400">User: <span id="user-display-name" class="text-indigo-400 font-bold">Guest</span></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="admin-back-btn" onclick="backToAdmin()" class="hidden px-3 py-1 bg-slate-700 text-white text-xs rounded hover:bg-slate-600">Back to Admin</button>
+                <span id="user-plan-badge" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded border border-slate-700 uppercase">Free</span>
+                <button onclick="toggleSettings(true)" class="p-2 text-slate-400 hover:text-white"><i data-lucide="settings" class="w-5 h-5"></i></button>
+                <button onclick="logout()" class="p-2 text-red-400 hover:text-red-300"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+
+        <!-- Tool Content -->
+        <div class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full grid lg:grid-cols-2 gap-6 overflow-y-auto">
+            <!-- Left: Input -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-[#1E293B] border border-slate-700 rounded-3xl p-1 flex-1 flex flex-col shadow-xl min-h-[300px] relative">
+                    <textarea id="text-input" class="flex-1 w-full bg-transparent text-lg p-6 resize-none outline-none text-slate-200 placeholder:text-slate-600" placeholder="Paste script..."></textarea>
+                    
+                    <!-- Free Limit Overlay -->
+                    <div id="limit-overlay" class="hidden absolute bottom-12 left-4 right-4 bg-red-500/10 border border-red-500/30 text-red-300 p-3 rounded-xl backdrop-blur-md text-xs flex justify-between items-center">
+                        <span><i data-lucide="lock" class="w-3 h-3 inline mr-1"></i> Free Limit (200 chars)</span>
+                        <button class="underline hover:text-white upgrade-trigger">Upgrade Now</button>
+                    </div>
+                    <div class="px-6 py-3 border-t border-slate-700/50 flex justify-between items-center">
+                        <span class="text-xs text-slate-500 font-mono"><span id="char-count">0</span> / <span id="max-chars">200</span> chars</span>
+                        <span id="pro-status" class="text-[10px] text-amber-500 font-bold hidden">PRO UNLOCKED</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Controls -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-[#1E293B] border border-slate-700 rounded-3xl h-[450px] flex flex-col overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-700 bg-[#1E293B] sticky top-0 z-10 flex justify-between">
+                        <span class="text-xs font-bold text-slate-400 uppercase">Voices</span>
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+                    <div class="p-4 bg-[#162032] border-b border-slate-700">
+                        <div class="flex justify-between mb-1 text-xs font-medium text-slate-400"><span>Speed</span><span id="speed-val" class="text-emerald-400">1.0x</span></div>
+                        <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full">
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar" id="voice-list"></div>
+                </div>
+
+                <div class="bg-[#1E293B] border border-slate-700 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl"></div>
+                    <div class="relative z-10 space-y-4">
+                        <div id="progress-container" class="hidden space-y-2">
+                            <div class="flex justify-between text-xs font-bold text-emerald-400"><span>Generating...</span><span id="progress-pct">0%</span></div>
+                            <div class="h-2 bg-slate-700 rounded-full overflow-hidden"><div id="progress-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div></div>
+                        </div>
+                        <button id="generate-btn" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="wand-2" class="w-5 h-5"></i> Generate Audio
+                        </button>
+                        <div id="result-container" class="hidden animate-in fade-in slide-in-from-bottom-2 space-y-3">
+                            <div class="bg-slate-900/50 p-2 rounded-xl border border-slate-700"><audio id="audio-player" controls class="w-full h-8"></audio></div>
+                            <div class="relative">
+                                <a id="download-link" href="#" download class="flex items-center justify-center gap-2 w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"><i data-lucide="download" class="w-4 h-4"></i> Download</a>
+                                <div id="download-lock" class="absolute inset-0 bg-slate-900/80 backdrop-blur-[1px] flex items-center justify-center rounded-xl cursor-pointer upgrade-trigger">
+                                    <span class="text-xs font-bold text-amber-400 flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> Upgrade to Download</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPGRADE MODAL (With Proof Upload) -->
+    <div id="upgrade-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-[#1E293B] border border-slate-700 rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
+            <button onclick="toggleUpgrade(false)" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="text-center mb-6">
+                <div class="inline-flex p-3 rounded-full bg-amber-500/20 text-amber-400 mb-3"><i data-lucide="crown" class="w-8 h-8"></i></div>
+                <h2 class="text-2xl font-bold text-white">Upgrade to Pro</h2>
+                <p class="text-slate-400 text-sm mt-1">$1 / Month (300 PKR)</p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- JazzCash -->
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Option 1: JazzCash</p>
+                        <p class="text-white font-mono text-lg">0322547740</p>
+                        <p class="text-xs text-emerald-400">Naveed Akhtar</p>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('0322547740'); alert('Copied!')" class="p-2 bg-slate-700 rounded hover:bg-slate-600 text-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                </div>
+
+                <!-- Binance -->
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Option 2: Binance Pay</p>
+                        <p class="text-white font-mono text-lg">YOUR_BINANCE_ID</p>
+                        <p class="text-xs text-amber-400">USDT / BUSD</p>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('YOUR_BINANCE_ID'); alert('Copied!')" class="p-2 bg-slate-700 rounded hover:bg-slate-600 text-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Upload Proof (Screenshot)</label>
+                    <input type="file" id="proof-file" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"/>
+                </div>
+
+                <button onclick="submitUpgradeRequest()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+                    Submit Request
+                </button>
+                <p id="upgrade-status" class="text-center text-xs text-emerald-400 mt-2 hidden">Request Submitted! Waiting for Admin...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center pt-20 hidden">
+        <div class="bg-[#1E293B] border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 class="text-white font-bold mb-4 flex items-center gap-2"><i data-lucide="key" class="w-4 h-4 text-indigo-400"></i> API Key</h3>
+            <div class="space-y-3">
+                <input id="api-key-input" type="password" placeholder="Paste Gemini API Key..." class="w-full bg-[#0B1120] border border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white mb-3">
+                <div class="flex gap-2">
+                    <button onclick="saveApiKey()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-xl text-sm font-bold">Add Key</button>
+                    <button onclick="toggleSettings(false)" class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm">Close</button>
+                </div>
+                <div class="text-xs text-slate-500 pt-2"><span id="active-keys-count">0 Keys Active</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ERROR TOAST -->
+    <div id="error-toast" class="fixed bottom-6 right-6 max-w-sm bg-[#1E293B] border-l-4 border-red-500 shadow-2xl rounded-lg p-4 hidden z-50">
+        <div class="flex items-start gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 mt-0.5"></i>
+            <div>
+                <h3 class="font-bold text-red-400 text-sm">Error</h3>
+                <p id="error-msg" class="text-xs text-slate-300 mt-1">Something went wrong.</p>
+            </div>
+            <button id="close-toast" class="ml-auto text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const ADMIN_USER = "GrowWithHaider";
+        const ADMIN_PASS = "HaiderAli000";
+        const TTS_MODEL = "gemini-2.5-flash-preview-tts";
+        const CHUNK_SIZE = 4000;
+        const VOICES = [
+            { id: "Fenrir", gender: "Male", desc: "Deep", premium: false }, { id: "Kore", gender: "Female", desc: "Soft", premium: false },
+            { id: "Puck", gender: "Male", desc: "Energetic", premium: true }, { id: "Charon", gender: "Male", desc: "Deep", premium: true },
+            { id: "Aoede", gender: "Female", desc: "Warm", premium: true }, { id: "Zephyr", gender: "Male", desc: "Smooth", premium: true },
+            { id: "Leda", gender: "Female", desc: "Gentle", premium: true }, { id: "Orus", gender: "Male", desc: "Confident", premium: true },
+            { id: "Umbriel", gender: "Male", desc: "Steady", premium: true }, { id: "Iapetus", gender: "Male", desc: "Serious", premium: true }
+        ];
+
+        let state = { user: null, text: "", voice: "Fenrir", keys: [], keyIdx: 0, gen: false, speed: 1.0 };
+        
+        const el = (id) => document.getElementById(id);
+        
+        function init() {
+            lucide.createIcons();
+            // Auto Login
+            const sess = sessionStorage.getItem('session');
+            if(sess) loginSuccess(JSON.parse(sess));
+
+            // Setup Listeners
+            el('text-input').oninput = handleInput;
+            el('speed-range').oninput = (e) => { state.speed = parseFloat(e.target.value); el('speed-val').innerText = state.speed + 'x'; };
+            document.querySelectorAll('.upgrade-trigger').forEach(b => b.onclick = () => toggleUpgrade(true));
+            
+            renderVoices();
+        }
+
+        // --- AUTH & ADMIN ---
+        window.toggleAuthMode = (mode) => {
+            if(mode === 'signup') { el('login-form-container').classList.add('hidden'); el('signup-form-container').classList.remove('hidden'); }
+            else { el('login-form-container').classList.remove('hidden'); el('signup-form-container').classList.add('hidden'); }
+        }
+
+        window.handleLogin = (e) => {
+            e.preventDefault();
+            const u = el('login-user').value, p = el('login-pass').value;
+            
+            if(u === ADMIN_USER && p === ADMIN_PASS) return loginSuccess({ username: 'Admin', role: 'admin' });
+
+            const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
+            const user = users.find(x => x.username === u && x.password === p);
+            if(user) loginSuccess(user);
+            else showError('auth-error', 'Invalid credentials');
+        }
+
+        window.handleSignup = (e) => {
+            e.preventDefault();
+            const u = el('signup-user').value, p = el('signup-pass').value;
+            if(!u || !p) return showError('auth-error', 'Fill all fields');
+            
+            const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
+            if(users.find(x => x.username === u)) return showError('auth-error', 'Username taken');
+            
+            const newUser = { username: u, password: p, plan: 'free', role: 'user' };
+            users.push(newUser);
+            localStorage.setItem('tts_users', JSON.stringify(users));
+            loginSuccess(newUser);
+        }
+
+        function loginSuccess(user) {
+            state.user = user;
+            sessionStorage.setItem('session', JSON.stringify(user));
+            el('auth-view').classList.add('hidden');
+            
+            if(user.role === 'admin') {
+                el('admin-view').classList.remove('hidden');
+                loadAdminPanel();
+            } else {
+                el('tool-view').classList.remove('hidden');
+                setupUserUI();
+            }
+        }
+
+        window.logout = () => { sessionStorage.removeItem('session'); location.reload(); }
+        function showError(id, msg) { const e = el(id); e.innerText = msg; e.classList.remove('hidden'); setTimeout(()=>e.classList.add('hidden'), 3000); }
+
+        // --- USER UI ---
+        function setupUserUI() {
+            el('user-display-name').innerText = state.user.username;
+            const plan = state.user.plan.toUpperCase();
+            el('user-plan-badge').innerText = plan;
+            el('user-plan-badge').className = `text-[10px] px-2 py-1 rounded border uppercase font-bold ${plan==='PRO'?'bg-emerald-900 text-emerald-400 border-emerald-700':'bg-slate-800 text-slate-400 border-slate-700'}`;
+            
+            // Load User Keys
+            const keys = localStorage.getItem(`keys_${state.user.username}`);
+            if(keys) state.keys = JSON.parse(keys);
+            el('active-keys-count').innerText = `${state.keys.length} Keys Active`;
+
+            if(plan === 'PRO') {
+                el('max-chars').innerText = '∞';
+                el('download-lock').classList.add('hidden');
+            } else {
+                el('max-chars').innerText = '200';
+                el('download-lock').classList.remove('hidden');
+            }
+            renderVoices();
+        }
+
+        window.handleInput = (e) => {
+            const val = e.target.value;
+            state.text = val;
+            el('char-count').innerText = val.length;
+            
+            if(state.user.role !== 'admin' && state.user.plan === 'free' && val.length > 200) {
+                el('limit-overlay').classList.remove('hidden');
+            } else {
+                el('limit-overlay').classList.add('hidden');
+            }
+        }
+
+        // --- ADMIN PANEL ---
+        function loadAdminPanel() {
+            const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
+            const reqs = JSON.parse(localStorage.getItem('tts_requests') || '[]');
+            
+            el('admin-total-users').innerText = users.length;
+            el('admin-pending-count').innerText = reqs.filter(r => r.status === 'pending').length;
+            
+            // Calc Revenue
+            let rev = 0;
+            users.forEach(u => { if(u.plan === 'pro') rev += 1; });
+            el('admin-revenue').innerText = rev.toFixed(2);
+
+            // Render Users
+            el('user-table-body').innerHTML = users.map((u,i) => `
+                <tr class="border-b border-slate-800">
+                    <td class="p-2 font-bold">${u.username}</td>
+                    <td class="p-2 text-xs"><span class="px-2 py-0.5 rounded ${u.plan==='pro'?'bg-emerald-900 text-emerald-400':'bg-slate-700'}">${u.plan}</span></td>
+                    <td class="p-2"><button onclick="deleteUser(${i})" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                </tr>
+            `).join('');
+            
+            // Render Requests
+            const reqHtml = reqs.map((r, i) => r.status === 'pending' ? `
+                <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-white">${r.username}</span>
+                        <span class="text-[10px] text-slate-400">${new Date(r.date).toLocaleDateString()}</span>
+                    </div>
+                    <div class="h-20 bg-black rounded overflow-hidden relative group cursor-pointer">
+                        <img src="${r.image}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" onclick="window.open('${r.image}')">
+                        <span class="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1 rounded">Click to view</span>
+                    </div>
+                    <div class="flex gap-2 mt-1">
+                        <button onclick="handleRequest(${i}, 'approve')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-1.5 rounded-lg font-bold">Approve</button>
+                        <button onclick="handleRequest(${i}, 'reject')" class="flex-1 bg-red-600 hover:bg-red-500 text-white text-xs py-1.5 rounded-lg font-bold">Reject</button>
+                    </div>
+                </div>
+            ` : '').join('');
+            el('requests-list').innerHTML = reqHtml || '<p class="text-slate-500 text-sm text-center">No pending requests</p>';
+            
+            lucide.createIcons();
+        }
+
+        window.handleRequest = (idx, action) => {
+            const reqs = JSON.parse(localStorage.getItem('tts_requests') || '[]');
+            const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
+            const req = reqs[idx];
+            
+            if(action === 'approve') {
+                const uIdx = users.findIndex(u => u.username === req.username);
+                if(uIdx > -1) {
+                    users[uIdx].plan = 'pro';
+                    localStorage.setItem('tts_users', JSON.stringify(users));
+                }
+                req.status = 'approved';
+            } else {
+                req.status = 'rejected';
+            }
+            
+            localStorage.setItem('tts_requests', JSON.stringify(reqs));
+            loadAdminPanel();
+            alert(`Request ${action}d!`);
+        }
+        
+        window.deleteUser = (i) => {
+            if(!confirm("Delete user?")) return;
+            const users = JSON.parse(localStorage.getItem('tts_users'));
+            users.splice(i,1);
+            localStorage.setItem('tts_users', JSON.stringify(users));
+            loadAdminPanel();
+        }
+
+        window.goToToolAsAdmin = () => {
+            el('admin-view').classList.add('hidden');
+            el('tool-view').classList.remove('hidden');
+            el('admin-back-btn').classList.remove('hidden');
+            setupUserUI(); // Will setup as admin (which effectively is unlimited)
+            // Temporary override plan for UI display
+            el('user-plan-badge').innerText = "ADMIN";
+            el('user-plan-badge').className = "text-[10px] bg-indigo-900 text-indigo-400 px-2 py-1 rounded border border-indigo-700 font-bold";
+            el('max-chars').innerText = "∞";
+            el('download-lock').classList.add('hidden');
+            renderVoices();
+        }
+        
+        window.backToAdmin = () => {
+            el('tool-view').classList.add('hidden');
+            el('admin-view').classList.remove('hidden');
+            loadAdminPanel();
+        }
+
+        // --- UPGRADE LOGIC ---
+        window.toggleUpgrade = (s) => el('upgrade-modal').classList.toggle('hidden', !s);
+        
+        window.submitUpgradeRequest = () => {
+            const file = el('proof-file').files[0];
+            if(!file) return alert("Please upload a screenshot");
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const reqs = JSON.parse(localStorage.getItem('tts_requests') || '[]');
+                reqs.push({
+                    username: state.user.username,
+                    image: e.target.result,
+                    status: 'pending',
+                    date: Date.now()
+                });
+                localStorage.setItem('tts_requests', JSON.stringify(reqs));
+                el('upgrade-status').classList.remove('hidden');
+                setTimeout(() => {
+                    el('upgrade-status').classList.add('hidden');
+                    toggleUpgrade(false);
+                }, 2000);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- GENERATION & VOICES ---
+        function renderVoices() {
+            const isFree = state.user?.role !== 'admin' && state.user?.plan === 'free';
+            el('voice-list').innerHTML = VOICES.map(v => {
+                const locked = isFree && v.premium;
+                return `
+                <div onclick="${locked ? 'toggleUpgrade(true)' : `selectVoice('${v.id}')`}" class="p-3 rounded-xl cursor-pointer flex items-center justify-between group ${state.voice===v.id?'bg-emerald-600/20 border border-emerald-500/50':'hover:bg-slate-800 border border-transparent'} ${locked?'opacity-60':''}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${state.voice===v.id?'bg-emerald-500 text-white':'bg-slate-700 text-slate-400'}">
+                            ${locked ? '<i data-lucide="lock" class="w-3 h-3"></i>' : v.id[0]}
+                        </div>
+                        <div><h4 class="text-sm font-bold text-white">${v.id}</h4><p class="text-[10px] text-slate-500">${v.gender}</p></div>
+                    </div>
+                </div>`;
+            }).join('');
+            lucide.createIcons();
+        }
+        window.selectVoice = (id) => { state.voice = id; renderVoices(); };
+
+        window.toggleSettings = (s) => el('settings-modal').classList.toggle('hidden', !s);
+        window.saveApiKey = () => {
+            const k = el('api-key-input').value.trim();
+            if(k) {
+                state.keys.push(k);
+                localStorage.setItem(`keys_${state.user.username}`, JSON.stringify(state.keys));
+                el('api-key-input').value="";
+                el('active-keys-count').innerText = `${state.keys.length} Keys Active`;
+                alert("Key Saved!");
+            }
+        }
+
+        // --- AUDIO ENGINE ---
+        window.generateAudio = async () => {
+            if(!state.text.trim()) return alert("Enter text");
+            if(state.user.role !== 'admin' && state.user.plan === 'free' && state.text.length > 200) return toggleUpgrade(true);
+            if(state.keys.length === 0) { toggleSettings(true); return alert("Add API Key"); }
+
+            // Set UI Loading
+            el('generate-btn').disabled = true;
+            el('generate-btn').innerText = "Processing...";
+            el('progress-container').classList.remove('hidden');
+            el('result-container').classList.add('hidden');
+
+            try {
+                const chunks = chunkText(state.text);
+                let completed = 0;
+                
+                const promises = chunks.map(async (chunk, idx) => {
+                    const buf = await fetchAudio(chunk);
+                    completed++;
+                    el('progress-bar').style.width = `${(completed/chunks.length)*100}%`;
+                    return { idx, buf };
+                });
+
+                const results = await Promise.all(promises);
+                results.sort((a,b) => a.idx - b.idx);
+                
+                // Merge
+                const blob = new Blob(results.map(r => r.buf), { type: 'audio/mp3' }); // Simple concat works for API chunks often
+                const url = URL.createObjectURL(blob);
+                
+                el('audio-player').src = url;
+                el('download-link').href = url;
+                el('download-link').download = `audio-${Date.now()}.mp3`;
+                el('result-container').classList.remove('hidden');
+
+            } catch(e) {
+                alert("Error: " + e.message);
+            } finally {
+                el('generate-btn').disabled = false;
+                el('generate-btn').innerText = "Generate Audio";
+            }
+        }
+
+        async function fetchAudio(text) {
+            let attempts = 0;
+            while(attempts < state.keys.length) {
+                const key = state.keys[state.currentKeyIndex];
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${key}`, {
+                        method:'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ contents: [{parts:[{text}]}], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: state.voice } } } } })
+                    });
+                    if(!res.ok) throw new Error(await res.text());
+                    const data = await res.json();
+                    const bin = atob(data.candidates[0].content.parts[0].inlineData.data);
+                    const bytes = new Uint8Array(bin.length);
+                    for(let i=0; i<bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                    return bytes.buffer;
+                } catch(e) {
+                    state.currentKeyIndex = (state.currentKeyIndex + 1) % state.keys.length;
+                    attempts++;
+                }
+            }
+            throw new Error("Keys Exhausted");
+        }
+
+        function chunkText(str) {
+            const c=[]; let cur=""; str.match(/[^.!?]+[.!?]+|[^.!?]+$/g).forEach(s=>{
+                if(cur.length+s.length<CHUNK_SIZE) cur+=s; else { if(cur) c.push(cur); cur=s; }
+            }); if(cur) c.push(cur); return c;
+        }
+
+        init();
+    </script>
+</body>
+</html>
