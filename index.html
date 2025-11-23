@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Creator Studio - Pro SaaS</title>
+    <title>AI Creator Studio - Admin Pro</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -107,10 +107,18 @@
             <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield" class="w-5 h-5 text-emerald-500"></i> Admin Dashboard</h2>
             <div class="flex gap-3">
                 <button onclick="goToToolAsAdmin()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg flex items-center gap-2 shadow-lg">
-                    <i data-lucide="mic" class="w-4 h-4"></i> Open Generator
+                    <i data-lucide="mic" class="w-4 h-4"></i> Open Generator (Ultra)
                 </button>
                 <button onclick="logout()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 text-xs font-bold rounded-lg border border-slate-700">Logout</button>
             </div>
+        </div>
+
+        <!-- Admin Notice -->
+        <div class="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-amber-400"></i>
+            <p class="text-xs text-amber-200">
+                <strong>Note:</strong> This is a local HTML file. Data (users/requests) is saved on <u>this browser only</u>. To sync across mobile/laptop, you need a database server.
+            </p>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6 max-w-7xl mx-auto w-full space-y-8">
@@ -169,7 +177,7 @@
                 <div class="bg-emerald-500/20 p-2 rounded-full"><i data-lucide="bell" class="w-5 h-5 text-emerald-500"></i></div>
                 <div>
                     <h3 class="font-bold text-white text-sm">New Payment!</h3>
-                    <p class="text-xs text-slate-400 mt-1">A user just uploaded proof.</p>
+                    <p class="text-xs text-slate-400 mt-1">Check pending requests.</p>
                 </div>
                 <button onclick="document.getElementById('admin-toast').classList.add('hidden')" class="ml-auto text-slate-500 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
@@ -282,7 +290,7 @@
                 <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 flex items-center justify-between">
                     <div>
                         <p class="text-[10px] font-bold text-slate-400 uppercase">Option 1: JazzCash</p>
-                        <p class="text-white font-mono text-lg">03222547740</p>
+                        <p class="text-white font-mono text-lg">0322547740</p>
                         <p class="text-xs text-emerald-400">Naveed Akhtar</p>
                     </div>
                     <button onclick="navigator.clipboard.writeText('0322547740'); alert('Copied!')" class="p-2 bg-slate-700 rounded hover:bg-slate-600 text-slate-300"><i data-lucide="copy" class="w-4 h-4"></i></button>
@@ -364,13 +372,10 @@
             const sess = sessionStorage.getItem('session');
             if(sess) loginSuccess(JSON.parse(sess));
             
-            // Real-time check for updates in local storage (Simulating backend listener)
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'tts_requests' && state.user?.role === 'admin') {
-                    loadAdminPanel(); // Auto refresh admin panel
-                    showAdminNotification(); // Show toast
-                }
-            });
+            // Real-time auto refresh for admin
+            setInterval(() => {
+                if(state.user?.role === 'admin') loadAdminPanel();
+            }, 2000);
 
             el('text-input').oninput = handleInput;
             el('speed-range').oninput = (e) => { state.speed = parseFloat(e.target.value); el('speed-val').innerText = state.speed + 'x'; };
@@ -378,7 +383,7 @@
             renderVoices();
         }
 
-        // --- AUTH & USERNAME LOGIC ---
+        // --- AUTH ---
         window.toggleAuthMode = (mode) => {
             if(mode === 'signup') { el('login-form-container').classList.add('hidden'); el('signup-form-container').classList.remove('hidden'); }
             else { el('login-form-container').classList.remove('hidden'); el('signup-form-container').classList.add('hidden'); }
@@ -391,13 +396,11 @@
 
             const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
             
-            // Auto-Expiry Check on Login
             const userIdx = users.findIndex(x => x.username === u && x.password === p);
             if(userIdx > -1) {
                 const user = users[userIdx];
-                // Check expiration
                 if (user.plan === 'pro' && user.planExpires && Date.now() > user.planExpires) {
-                    user.plan = 'free'; // Downgrade
+                    user.plan = 'free'; 
                     user.planExpires = null;
                     users[userIdx] = user;
                     localStorage.setItem('tts_users', JSON.stringify(users));
@@ -412,7 +415,6 @@
         window.handleSignup = (e) => {
             e.preventDefault();
             const email = el('signup-email').value;
-            // Sanitize Username: Lowercase, No Spaces
             const uRaw = el('signup-user').value;
             const u = uRaw.toLowerCase().replace(/\s+/g, '');
             const p = el('signup-pass').value;
@@ -420,21 +422,14 @@
             if(!email || !u || !p) return showAuthError('All fields required');
 
             const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
-            if(users.find(x => x.username === u)) return showAuthError('Username already taken. Try another.');
-            if(users.find(x => x.email === email)) return showAuthError('Email already registered.');
+            if(users.find(x => x.username === u)) return showAuthError('Username taken');
+            if(users.find(x => x.email === email)) return showAuthError('Email registered');
 
-            const newUser = { 
-                username: u, 
-                email: email,
-                password: p, 
-                plan: 'free', 
-                role: 'user',
-                joined: Date.now()
-            };
+            const newUser = { username: u, email: email, password: p, plan: 'free', role: 'user', joined: Date.now() };
             users.push(newUser);
             localStorage.setItem('tts_users', JSON.stringify(users));
             loginSuccess(newUser);
-            alert(`Account created! Your username is: ${u}`);
+            alert(`Account created! Username: ${u}`);
         }
 
         function showAuthError(msg) {
@@ -494,19 +489,29 @@
         }
 
         // --- ADMIN PANEL ---
+        let lastRequestCount = 0;
+
         function loadAdminPanel() {
             const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
             const reqs = JSON.parse(localStorage.getItem('tts_requests') || '[]');
             
             el('admin-total-users').innerText = users.length;
+            
             const pending = reqs.filter(r => r.status === 'pending');
             el('admin-pending-count').innerText = pending.length;
             el('admin-notification-dot').style.display = pending.length > 0 ? 'block' : 'none';
             
+            // Check for new notifications
+            if(pending.length > lastRequestCount) {
+                showAdminNotification();
+            }
+            lastRequestCount = pending.length;
+
             let rev = 0;
             users.forEach(u => { if(u.plan === 'pro') rev += 1; });
             el('admin-revenue').innerText = rev.toFixed(2);
 
+            // Render Users
             el('user-table-body').innerHTML = users.map((u,i) => `
                 <tr class="border-b border-slate-800">
                     <td class="p-2">
@@ -519,8 +524,9 @@
                 </tr>
             `).join('');
             
+            // Render Requests
             const reqHtml = reqs.map((r, i) => r.status === 'pending' ? `
-                <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-2 mb-2">
+                <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-2 mb-2 animate-in fade-in">
                     <div class="flex justify-between items-center">
                         <span class="font-bold text-white text-sm">${r.username}</span>
                         <span class="text-[10px] text-slate-400">${new Date(r.date).toLocaleDateString()}</span>
@@ -553,7 +559,6 @@
                 const uIdx = users.findIndex(u => u.username === req.username);
                 if(uIdx > -1) {
                     users[uIdx].plan = 'pro';
-                    // Set Expiry: 30 Days from now
                     users[uIdx].planExpires = Date.now() + (30 * 24 * 60 * 60 * 1000); 
                     localStorage.setItem('tts_users', JSON.stringify(users));
                 }
@@ -582,8 +587,6 @@
             reader.onload = (e) => {
                 const reqs = JSON.parse(localStorage.getItem('tts_requests') || '[]');
                 reqs.push({ username: state.user.username, image: e.target.result, status: 'pending', date: Date.now() });
-                // Trigger storage event manually for same-tab updates if any listener attached (browsers usually only fire storage on OTHER tabs)
-                // But since we are in same session, we just save.
                 localStorage.setItem('tts_requests', JSON.stringify(reqs));
                 
                 el('upgrade-status').classList.remove('hidden');
