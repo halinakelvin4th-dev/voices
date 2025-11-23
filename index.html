@@ -107,18 +107,10 @@
             <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield" class="w-5 h-5 text-emerald-500"></i> Admin Dashboard</h2>
             <div class="flex gap-3">
                 <button onclick="goToToolAsAdmin()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg flex items-center gap-2 shadow-lg">
-                    <i data-lucide="mic" class="w-4 h-4"></i> Open Generator (Ultra)
+                    <i data-lucide="mic" class="w-4 h-4"></i> Open Generator
                 </button>
                 <button onclick="logout()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 text-xs font-bold rounded-lg border border-slate-700">Logout</button>
             </div>
-        </div>
-
-        <!-- Admin Notice -->
-        <div class="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center gap-2">
-            <i data-lucide="info" class="w-4 h-4 text-amber-400"></i>
-            <p class="text-xs text-amber-200">
-                <strong>Note:</strong> This is a local HTML file. Data (users/requests) is saved on <u>this browser only</u>. To sync across mobile/laptop, you need a database server.
-            </p>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6 max-w-7xl mx-auto w-full space-y-8">
@@ -383,7 +375,7 @@
             renderVoices();
         }
 
-        // --- AUTH ---
+        // --- AUTH & USERNAME LOGIC ---
         window.toggleAuthMode = (mode) => {
             if(mode === 'signup') { el('login-form-container').classList.add('hidden'); el('signup-form-container').classList.remove('hidden'); }
             else { el('login-form-container').classList.remove('hidden'); el('signup-form-container').classList.add('hidden'); }
@@ -396,11 +388,13 @@
 
             const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
             
+            // Auto-Expiry Check on Login
             const userIdx = users.findIndex(x => x.username === u && x.password === p);
             if(userIdx > -1) {
                 const user = users[userIdx];
+                // Check expiration
                 if (user.plan === 'pro' && user.planExpires && Date.now() > user.planExpires) {
-                    user.plan = 'free'; 
+                    user.plan = 'free'; // Downgrade
                     user.planExpires = null;
                     users[userIdx] = user;
                     localStorage.setItem('tts_users', JSON.stringify(users));
@@ -415,6 +409,7 @@
         window.handleSignup = (e) => {
             e.preventDefault();
             const email = el('signup-email').value;
+            // Sanitize Username: Lowercase, No Spaces
             const uRaw = el('signup-user').value;
             const u = uRaw.toLowerCase().replace(/\s+/g, '');
             const p = el('signup-pass').value;
@@ -422,14 +417,21 @@
             if(!email || !u || !p) return showAuthError('All fields required');
 
             const users = JSON.parse(localStorage.getItem('tts_users') || '[]');
-            if(users.find(x => x.username === u)) return showAuthError('Username taken');
-            if(users.find(x => x.email === email)) return showAuthError('Email registered');
+            if(users.find(x => x.username === u)) return showAuthError('Username already taken. Try another.');
+            if(users.find(x => x.email === email)) return showAuthError('Email already registered.');
 
-            const newUser = { username: u, email: email, password: p, plan: 'free', role: 'user', joined: Date.now() };
+            const newUser = { 
+                username: u, 
+                email: email,
+                password: p, 
+                plan: 'free', 
+                role: 'user',
+                joined: Date.now()
+            };
             users.push(newUser);
             localStorage.setItem('tts_users', JSON.stringify(users));
             loginSuccess(newUser);
-            alert(`Account created! Username: ${u}`);
+            alert(`Account created! Your username is: ${u}`);
         }
 
         function showAuthError(msg) {
@@ -559,6 +561,7 @@
                 const uIdx = users.findIndex(u => u.username === req.username);
                 if(uIdx > -1) {
                     users[uIdx].plan = 'pro';
+                    // Set Expiry: 30 Days from now
                     users[uIdx].planExpires = Date.now() + (30 * 24 * 60 * 60 * 1000); 
                     localStorage.setItem('tts_users', JSON.stringify(users));
                 }
